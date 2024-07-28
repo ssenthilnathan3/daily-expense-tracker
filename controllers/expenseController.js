@@ -1,48 +1,33 @@
 const Expense = require('../models/expense');
 const User = require('../models/user');
-const { validateSplits } = require('../utils/validation');
-const { generateBalanceSheet } = require('../utils/balanceSheet');
+const { validateSplits } = require('../utils/validation'); // Assuming the function is in a separate utils/validation.js file
 
 exports.addExpense = async (req, res) => {
-    try {
-        const { description, amount, paidBy, splitMethod, splits } = req.body;
+  const { description, amount, paidBy, splitMethod, splits } = req.body;
 
-        if (!validateSplits(splitMethod, splits, amount)) {
-            return res.status(400).json({ message: 'Invalid splits' });
-        }
+  // Validate inputs
+  if (!description || !amount || !paidBy || !splitMethod || !splits) {
+    return res.status(400).json({ error: 'All fields are required.' });
+  }
 
-        const newExpense = new Expense({ description, amount, paidBy, splitMethod, splits });
-        await newExpense.save();
-        res.status(201).json(newExpense);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+  // Validate users in splits
+  for (const split of splits) {
+    const user = await User.findOne({ email: split.user });
+    if (!user) {
+      return res.status(400).json({ error: `User ${split.user} does not exist.` });
     }
-};
+  }
 
-exports.getUserExpenses = async (req, res) => {
-    try {
-        const expenses = await Expense.find({ 'splits.user': req.params.userId }).populate('paidBy splits.user');
-        res.status(200).json(expenses);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
+  // Validate splits based on the split method
+  if (!validateSplits(splitMethod, splits, amount)) {
+    return res.status(400).json({ error: 'Invalid splits for the selected split method.' });
+  }
 
-exports.getOverallExpenses = async (req, res) => {
-    try {
-        const expenses = await Expense.find().populate('paidBy splits.user');
-        res.status(200).json(expenses);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-exports.downloadBalanceSheet = async (req, res) => {
-    try {
-        const expenses = await Expense.find().populate('paidBy splits.user');
-        const balanceSheet = generateBalanceSheet(expenses);
-        res.status(200).json(balanceSheet);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+  try {
+    const expense = new Expense({ description, amount, paidBy, splitMethod, splits });
+    await expense.save();
+    res.status(201).json(expense);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };

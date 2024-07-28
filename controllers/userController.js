@@ -19,16 +19,26 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.createUser = async (req, res) => {
-    const { name, email, mobile, password } = req.body;
-    try {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const user = new User({ name, email, mobile, password: hashedPassword });
-      await user.save();
-      res.status(201).json(user);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  };
+  const { name, email, mobile, password } = req.body;
+  try {
+    // Log the password to check if it's defined
+    console.log('Password:', password);
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Log the hashed password to verify the process
+    console.log('Hashed Password:', hashedPassword);
+
+    const user = new User({ name, email, mobile, password: hashedPassword });
+    await user.save();
+    res.status(201).json(user);
+  } catch (error) {
+    // Log the error for debugging
+    console.error(error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
 
   exports.getUser = async (req, res) => {
     try {
